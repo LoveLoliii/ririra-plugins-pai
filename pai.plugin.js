@@ -87,9 +87,16 @@ export default {
 
         if (!input) {
           // 查询当前 π 状态
-          const pai = await paiRepository.findOne({ where: { uid, gid, status: In([0, 1]) } });
+          const pai = await paiRepository.findOne({
+            where: { uid, gid, status: In([0, 1]) },
+            order: { created_at: 'DESC' },
+          });
           if (pai && pai.pai) {
-            await ctx.reply(`你当前的 π 查找任务：\n目标：${pai.pai}\n进度：${pai.find_where}\n耗时：${pai.find_secord}s`);
+            if(pai.status === 0){
+              await ctx.reply(`「${pai_value}」首次出现在 π 的第 ${pos} 位（小数点后），耗时 ${totalSec}s`);
+            }else{
+              await ctx.reply(`你当前的 π 查找任务：\n目标：${pai.pai}\n进度：${pai.find_where}\n耗时：${pai.find_secord}s`);
+            }
           } else {
             await ctx.reply('你当前没有 π 查找任务。示例 `/pai 14159` 开始查找。');
           }
