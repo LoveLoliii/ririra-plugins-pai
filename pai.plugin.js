@@ -93,7 +93,7 @@ export default {
           });
           if (pai && pai.pai) {
             if(pai.status === 0){
-              await ctx.reply(`「${pai_value}」首次出现在 π 的第 ${pos} 位（小数点后），耗时 ${totalSec}s`);
+              await ctx.reply(`「${pai.pai}」首次出现在 π 的第 ${pai.find_where} 位（小数点后），耗时 ${pai.find_secord}s`);
             }else{
               await ctx.reply(`你当前的 π 查找任务：\n目标：${pai.pai}\n进度：${pai.find_where}\n耗时：${pai.find_secord}s`);
             }
