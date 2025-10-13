@@ -1,20 +1,12 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { Logger } from '@nestjs/common';
 import { In } from 'typeorm';
 import { Pai } from './entity/ririra.pai.js';
+import Decimal from 'decimal.js';
 
 // ESM 下没有 this 指向全局，所以用字符串或模块名作为 context
 const logger = new Logger('PaiPlugin');
 
-// 获取 __filename 和 __dirname（ESM 方式）
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// 读取 package.json
-const packageJsonPath = path.join(__dirname, 'package.json');
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+Decimal.set({ precision: 10000 });
 
 /**
  * 异步延迟函数
@@ -24,50 +16,52 @@ function sleep(ms) {
 }
 
 /**
- * 使用 BBP 公式（Bailey–Borwein–Plouffe）异步分批计算 π 的小数位，
- * 慢速查找目标数字串在 π 的小数点后第几位出现。
- * @param {string} target 目标字符串（例如 "14159"）
- * @param {(progress: number) => Promise<void>} onProgress 进度回调
- * @returns {Promise<number|null>} 找到则返回位置（1-based），否则 null
+ * 计算 π 的十进制小数部分
+ * @param {number} digits 小数位数
+ * @returns {string} π 的小数部分字符串
  */
-async function slowFindInPi(target, onProgress) {
-  // BBP 公式实现（十六进制位）
-  function bbpTerm(k) {
-    return (
-      (1 / Math.pow(16, k)) *
-      (4 / (8 * k + 1) - 2 / (8 * k + 4) - 1 / (8 * k + 5) - 1 / (8 * k + 6))
-    );
+function computePi(digits) {
+  const one = new Decimal(1);
+  const four = new Decimal(4);
+  const terms = Math.ceil(digits / 14) + 10; // 足够精度
+
+  function arctan(x) {
+    let xPow = x;
+    let sum = new Decimal(0);
+    for (let n = 0; n < terms; n++) {
+      const term = xPow.div(2 * n + 1);
+      sum = n % 2 === 0 ? sum.plus(term) : sum.minus(term);
+      xPow = xPow.times(x).times(x);
+    }
+    return sum;
   }
 
-  const targetLen = target.length;
-  let piDigits = '';
-  const batchSize = 1000;
-  const maxDigits = Infinity; // 最大计算位数（防止无限运行）
+  const arctan1_5 = arctan(one.div(5));
+  const arctan1_239 = arctan(one.div(239));
+  const pi = four.times(four.times(arctan1_5).minus(arctan1_239));
+  return pi.toFixed(digits).replace('.', '');
+}
 
-  for (let i = 0; i < maxDigits; i += batchSize) {
-    let batch = '';
-    for (let j = 0; j < batchSize; j++) {
-      const n = i + j;
-      let x = 0;
-      for (let k = 0; k <= n; k++) {
-        x += bbpTerm(k);
-      }
-      x = x - Math.floor(x);
-      const hexDigit = Math.floor(16 * x);
-      batch += (hexDigit % 10).toString(); // 简单转十进制字符
-    }
+/**
+ * 异步查找目标数字串在 π 小数中的位置
+ * @param {string} target
+ * @param {(progress: number) => Promise<void>} onProgress
+ * @returns {Promise<number|null>}
+ */
+async function findInPi(target, onProgress) {
+  const chunkSize = 10000;
+  let position = 0;
+  const targetLength = target.length;
 
-    piDigits += batch;
+  while (true) {
+    const piDigits = computePi(position + chunkSize).slice(position);
     const idx = piDigits.indexOf(target);
-    if (idx !== -1) {
-      return idx + 1; // 位置从 1 开始
-    }
-
-    if (onProgress) await onProgress(i + batchSize);
-    await sleep(10); // 暂停以避免 CPU 爆炸
+    if (idx !== -1) return position + idx + 1;
+    position += chunkSize;
+    if (onProgress) await onProgress(position);
+    //if (position > 1000000) return null; // 最大查找长度限制
+    await sleep(10); // 异步暂停，避免阻塞
   }
-
-  return null;
 }
 
 // 插件主体
@@ -136,7 +130,7 @@ export default {
             }
           };
 
-          const pos = await slowFindInPi(pai_value, onProgress);
+          const pos = await findInPi(pai_value, onProgress);
           const totalSec = Math.floor((Date.now() - startTime) / 1000);
 
           pai.find_where = pos || 0;
