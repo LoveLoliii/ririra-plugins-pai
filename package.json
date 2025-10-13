@@ -1,0 +1,32 @@
+{
+  "name": "ririra-plugins-pai",
+  "version": "1.0.0",
+  "main": "pai.plugin.js",
+  "cmd": "/pai",
+  "type": "module",
+  "events": {
+    "MESSAGE_CREATE": true,
+    "GROUP_AT_MESSAGE_CREATE": true
+  },
+  "emit": [
+  ],
+  "priority": 1000,
+  "enable": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "source": {
+    "type": "git",
+    "url": "https://github.com/LoveLoliii/ririra-plugins-pai.git"
+  },
+  "dependencies": {
+    "@nestjs/typeorm": "^11.0.0",
+    "mysql2": "^3.15.2",
+    "ririra-types": "^1.0.3",
+    "typeorm": "^0.3.27"
+  }
+}
