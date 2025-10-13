@@ -79,7 +79,7 @@ export default {
         (async () => {
           const startTime = Date.now();
           try {
-            const { position: pos } = await runPiWorker(pai_value);
+            const { position: pos } = await runPiWorker(pai_value, paiRepository, pai);
             const totalSec = Math.floor((Date.now() - startTime) / 1000);
 
             pai.find_where = pos || 0;
@@ -102,14 +102,28 @@ export default {
 
 
 // 计算 pai 的函数改成 worker 异步调用
-function runPiWorker(pai_value) {
+function runPiWorker(pai_value, paiRepository, pai) {
   return new Promise((resolve, reject) => {
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
     const worker = new Worker(path.join(__dirname, 'pi-worker.js'), {
       workerData: { target: pai_value }
     });
 
-    worker.on('message', resolve);
+    worker.on('message', async (msg) => {
+      if (msg.progress) {
+        // 每分钟的进度更新
+        try {
+          await paiRepository.update({ id: pai.id }, {
+            find_where: msg.progress.where,
+            find_secord: msg.progress.seconds
+          });
+        } catch (e) {
+          logger.error('进度更新失败', e);
+        }
+      } else {
+        resolve(msg);
+      }
+    });
     worker.on('error', reject);
     worker.on('exit', code => {
       if (code !== 0) reject(new Error(`Worker stopped with exit code ${code}`));

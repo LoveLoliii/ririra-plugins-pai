@@ -33,12 +33,26 @@ function computePi(digits) {
 async function findInPi(target) {
   const chunkSize = 10000;
   let position = 0;
+  const startTime = Date.now();
+  let lastReportTime = Date.now();
 
   while (true) {
     const piDigits = computePi(position + chunkSize).slice(position);
     const idx = piDigits.indexOf(target);
     if (idx !== -1) return position + idx + 1;
     position += chunkSize;
+    // 每分钟上报一次进度
+    const now = Date.now();
+    if (now - lastReportTime >= 60000) { // 每分钟
+      const seconds = Math.floor((now - startTime) / 1000);
+      parentPort.postMessage({
+        progress: {
+          where: position,
+          seconds
+        }
+      });
+      lastReportTime = now;
+    }
     await sleep(10); // 让出事件循环
   }
 }
