@@ -2,10 +2,14 @@ import { Logger } from '@nestjs/common';
 import { Worker } from 'worker_threads';
 import { In } from 'typeorm';
 import { Pai } from './entity/ririra.pai.js';
-
+import path from 'path';
+import fs from 'fs';
 // ESM 下没有 this 指向全局，所以用字符串或模块名作为 context
 const logger = new Logger('PaiPlugin');
 
+// 获取 __filename 和 __dirname（ESM 方式）
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // 插件主体
 export default {
