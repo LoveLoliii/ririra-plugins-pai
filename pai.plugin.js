@@ -105,7 +105,10 @@ export default {
 
         // 新建任务
         const pai_value = input;
-        let pai = await paiRepository.findOne({ where: { uid, gid, status: In([0, 1]) } });
+        let pai = await paiRepository.findOne({
+            where: { uid, gid, status: In([0, 1]) },
+            order: { created_at: 'DESC' },
+          });
         if (pai) {
           pai.status = -1;
           await paiRepository.save(pai);
